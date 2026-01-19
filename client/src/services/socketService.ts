@@ -1,6 +1,28 @@
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
+import { useEditorStore, type Participant } from "../store/useEditorStore";
+
+export const MessageType = {
+  JOIN_ROOM: "JOIN_ROOM",
+  LEAVE_ROOM: "LEAVE_ROOM",
+  CODE_CHANGE: "CODE_CHANGE",
+  CURSOR_MOVE: "CURSOR_MOVE",
+  PARTICIPANTS_UPDATE: "PARTICIPANTS_UPDATE",
+} as const;
+
+export type MessageType = (typeof MessageType)[keyof typeof MessageType];
+
+interface SocketMessage {
+  type: MessageType;
+  roomId: string;
+  payload: any;
+}
+
 export class SocketService {
   private static instance: SocketService;
-  private socket: WebSocket | null = null;
+  private client: Client | null = null;
+  private roomId: string | null = null;
+  private isConnected: boolean = false;
 
   private constructor() {}
 
@@ -11,28 +33,135 @@ export class SocketService {
     return SocketService.instance;
   }
 
-  public connect(url: string = "ws://localhost:3000") {
-    console.log(`Connecting to ${url}...`);
-    // Mock simulation
-    setTimeout(() => {
-      console.log("Connected to WebSocket");
-    }, 500);
+  public connect(
+    roomId: string,
+    name: string = "Anonymous",
+    url: string = "http://localhost:8080/ws",
+  ) {
+    if (this.isConnected) return;
+
+    this.roomId = roomId;
+
+    this.client = new Client({
+      brokerURL: url.replace("http", "ws"), // Fallback if no webSocketFactory
+      webSocketFactory: () => new SockJS(url),
+      debug: (str) => {
+        console.log(str);
+      },
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+    });
+
+    this.client.onConnect = (frame) => {
+      this.isConnected = true;
+      console.log("Connected to WebSocket", frame);
+
+      // Subscribe to room updates
+      this.client?.subscribe(`/topic/room/${roomId}`, (message) => {
+        const body: SocketMessage = JSON.parse(message.body);
+        this.handleIncomingMessage(body);
+      });
+
+      // Join the room
+      this.joinRoom(name);
+    };
+
+    this.client.onStompError = (frame) => {
+      console.error("Broker reported error: " + frame.headers["message"]);
+      console.error("Additional details: " + frame.body);
+      this.isConnected = false;
+    };
+
+    this.client.activate();
   }
 
   public disconnect() {
-    if (this.socket) {
-      this.socket.close();
-      this.socket = null;
+    if (this.client) {
+      if (this.roomId && this.isConnected) {
+        this.send(
+          {
+            type: MessageType.LEAVE_ROOM,
+            roomId: this.roomId,
+            payload: {},
+          },
+          "/app/room.leave",
+        );
+      }
+      this.client.deactivate();
+      this.client = null;
+      this.isConnected = false;
     }
   }
 
+  private joinRoom(name: string) {
+    this.send(
+      {
+        type: MessageType.JOIN_ROOM,
+        roomId: this.roomId!,
+        payload: { name },
+      },
+      "/app/room.join",
+    );
+  }
+
   public sendCodeChange(code: string) {
-    console.log("Sending code change:", code);
-    // this.socket.send(JSON.stringify({ type: 'code-change', payload: code }));
+    if (!this.isConnected) return;
+    this.send(
+      {
+        type: MessageType.CODE_CHANGE,
+        roomId: this.roomId!,
+        payload: { code },
+      },
+      "/app/code.change",
+    );
   }
 
   public sendCursorMove(lineNumber: number, column: number) {
-    console.log("Sending cursor move:", { lineNumber, column });
+    if (!this.isConnected) return;
+    this.send(
+      {
+        type: MessageType.CURSOR_MOVE,
+        roomId: this.roomId!,
+        payload: { lineNumber, column },
+      },
+      "/app/cursor.move",
+    );
+  }
+
+  private send(message: SocketMessage, destination: string) {
+    if (this.client && this.isConnected) {
+      this.client.publish({
+        destination,
+        body: JSON.stringify(message),
+      });
+    }
+  }
+
+  private handleIncomingMessage(message: SocketMessage) {
+    const store = useEditorStore.getState();
+
+    switch (message.type) {
+      case MessageType.PARTICIPANTS_UPDATE: {
+        const participants: Participant[] = message.payload;
+        store.setParticipants(participants);
+        break;
+      }
+      case MessageType.CODE_CHANGE: {
+        const { code } = message.payload;
+        // In a real app we'd compare senderSessionId with our own sessionId
+        // For now, let's assume we handle loop prevention in the component
+        store.setCode(code);
+        break;
+      }
+      case MessageType.CURSOR_MOVE: {
+        const { senderSessionId, lineNumber, column } = message.payload;
+        if (senderSessionId) {
+          store.updateCursor(senderSessionId, { lineNumber, column });
+        }
+        break;
+      }
+    }
   }
 }
 

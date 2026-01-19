@@ -4,10 +4,12 @@ import { Sidebar } from "./Sidebar";
 import { EditorPanel } from "./EditorPanel";
 import { Terminal } from "./Terminal";
 import { Navbar } from "./Navbar";
+import { useEditorStore } from "../store/useEditorStore";
 
 export const Layout = () => {
   // Terminal Height State (default 256px)
   const [terminalHeight, setTerminalHeight] = useState(256);
+  const user = useEditorStore((state) => state.user);
   const isResizing = useRef(false);
 
   const startResizing = useCallback(() => {
@@ -53,9 +55,11 @@ export const Layout = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden w-full relative">
         {/* Sidebar - Fixed Width */}
-        <aside className="w-64 flex-none border-r border-white/10 flex flex-col bg-space-dark/95 backdrop-blur-sm z-40">
-          <Sidebar />
-        </aside>
+        {user && (
+          <aside className="w-64 flex-none border-r border-white/10 flex flex-col bg-space-dark/95 backdrop-blur-sm z-40">
+            <Sidebar />
+          </aside>
+        )}
 
         {/* Center - Editor & Terminal */}
         <div className="flex-1 flex flex-col min-w-0 bg-space-dark relative z-0">

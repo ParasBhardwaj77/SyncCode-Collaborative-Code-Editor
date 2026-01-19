@@ -14,22 +14,43 @@ interface EditorState {
   participants: Participant[];
   terminalOutput: string;
   isRunning: boolean;
+  roomId: string;
+  user: { username: string; token: string } | null;
 
   setCode: (code: string) => void;
   setLanguage: (language: string) => void;
+  setParticipants: (participants: Participant[]) => void;
   addParticipant: (participant: Participant) => void;
   removeParticipant: (id: string) => void;
   updateCursor: (
     id: string,
-    pos: { lineNumber: number; column: number }
+    pos: { lineNumber: number; column: number },
   ) => void;
   appendTerminalOutput: (text: string) => void;
   clearTerminal: () => void;
   setIsRunning: (isRunning: boolean) => void;
+  setRoomId: (roomId: string) => void;
+  setUser: (user: { username: string; token: string } | null) => void;
 }
 
+const BOILERPLATES: Record<string, string> = {
+  javascript: `// JavaScript Playground\n\nfunction greet(name) {\n  console.log("Hello, " + name + "!");\n}\n\ngreet("SyncCode User");\n`,
+};
+
+const getInitialUser = () => {
+  const userStr = localStorage.getItem("user");
+  if (userStr) {
+    try {
+      return JSON.parse(userStr);
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+};
+
 export const useEditorStore = create<EditorState>((set) => ({
-  code: "// Start coding...",
+  code: BOILERPLATES.javascript,
   language: "javascript",
   participants: [
     {
@@ -47,9 +68,21 @@ export const useEditorStore = create<EditorState>((set) => ({
   ],
   terminalOutput: "> Ready to run code...\n",
   isRunning: false,
+  roomId: "default-room",
+  user: getInitialUser(),
 
   setCode: (code) => set({ code }),
-  setLanguage: (language) => set({ language }),
+  setLanguage: (language) =>
+    set((state) => ({
+      language,
+      code:
+        !state.code ||
+        state.code === BOILERPLATES.javascript ||
+        state.code === "// Start coding..."
+          ? BOILERPLATES.javascript
+          : state.code,
+    })),
+  setParticipants: (participants) => set({ participants }),
   addParticipant: (p) =>
     set((state) => ({ participants: [...state.participants, p] })),
   removeParticipant: (id) =>
@@ -59,11 +92,13 @@ export const useEditorStore = create<EditorState>((set) => ({
   updateCursor: (id, pos) =>
     set((state) => ({
       participants: state.participants.map((p) =>
-        p.id === id ? { ...p, cursorPos: pos } : p
+        p.id === id ? { ...p, cursorPos: pos } : p,
       ),
     })),
   appendTerminalOutput: (text) =>
     set((state) => ({ terminalOutput: state.terminalOutput + text })),
   clearTerminal: () => set({ terminalOutput: "" }),
   setIsRunning: (isRunning) => set({ isRunning }),
+  setRoomId: (roomId) => set({ roomId }),
+  setUser: (user) => set({ user }),
 }));

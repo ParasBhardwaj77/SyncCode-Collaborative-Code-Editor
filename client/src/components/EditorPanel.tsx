@@ -7,7 +7,7 @@ import { useRef, useEffect } from "react";
 // Loader.config({ paths: { vs: "..." } });
 
 export const EditorPanel = () => {
-  const { code, language, setCode, participants } = useEditorStore();
+  const { code, language, setCode, participants, roomId } = useEditorStore();
   const monacoRef = useRef<Monaco | null>(null);
   const editorRef = useRef<any>(null);
 
@@ -15,7 +15,11 @@ export const EditorPanel = () => {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // Placeholder for restoring cursor or other init logic
+    // Listen for cursor changes
+    editor.onDidChangeCursorPosition((e: any) => {
+      socketService.sendCursorMove(e.position.lineNumber, e.position.column);
+    });
+
     console.log("Editor mounted");
   };
 
@@ -48,13 +52,28 @@ export const EditorPanel = () => {
   };
 
   const handleChange = (value: string | undefined) => {
-    if (value !== undefined) {
+    if (value !== undefined && value !== code) {
       setCode(value);
       socketService.sendCodeChange(value);
     }
   };
 
-  // Effect to handle remote cursor updates (Placeholder logic)
+  // Connect/Reconnect to WebSocket when roomId changes
+  useEffect(() => {
+    if (!roomId) return;
+
+    // Disconnect previous session if any
+    socketService.disconnect();
+
+    // Connect to the new room
+    socketService.connect(roomId, "User_" + Math.floor(Math.random() * 1000));
+
+    console.log(`Connected to room: ${roomId}`);
+
+    return () => {
+      socketService.disconnect();
+    };
+  }, [roomId]);
   useEffect(() => {
     if (!editorRef.current || !monacoRef.current) return;
 
