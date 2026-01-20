@@ -12,8 +12,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Room {
 
     private final String roomId;
-    // Track by name (username) instead of sessionId to maintain status
     private final Map<String, Participant> participants = new ConcurrentHashMap<>();
+    private String currentCode;
+    private String currentLanguage = "javascript"; // Default
 
     public void addParticipant(Participant participant) {
         participants.put(participant.getName(), participant);

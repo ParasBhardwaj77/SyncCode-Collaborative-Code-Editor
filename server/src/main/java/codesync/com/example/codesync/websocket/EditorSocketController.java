@@ -57,6 +57,21 @@ public class EditorSocketController {
                                 "/topic/room/" + roomId,
                                 buildParticipantsUpdate(roomId));
 
+                // Send current code to the joining user (broadcast to everyone, but client
+                // filters by targetName)
+                Room room = roomService.getRoom(roomId);
+                if (room.getCurrentCode() != null) {
+                        SocketMessage syncMessage = new SocketMessage();
+                        syncMessage.setType(MessageType.CODE_SYNC);
+                        syncMessage.setRoomId(roomId);
+                        Map<String, Object> syncPayload = Map.of(
+                                        "code", room.getCurrentCode(),
+                                        "language", room.getCurrentLanguage(),
+                                        "targetName", name);
+                        syncMessage.setPayload(syncPayload);
+                        messagingTemplate.convertAndSend("/topic/room/" + roomId, syncMessage);
+                }
+
                 log.info("✅ {} joined room {}", name, roomId);
         }
 
@@ -94,6 +109,17 @@ public class EditorSocketController {
 
                 Map<String, Object> payload = (Map<String, Object>) message.getPayload();
                 payload.put("senderSessionId", sessionId);
+
+                // Update room state
+                Room room = roomService.getRoom(message.getRoomId());
+                if (room != null) {
+                        if (payload.containsKey("code")) {
+                                room.setCurrentCode(payload.get("code").toString());
+                        }
+                        if (payload.containsKey("language")) {
+                                room.setCurrentLanguage(payload.get("language").toString());
+                        }
+                }
 
                 messagingTemplate.convertAndSend(
                                 "/topic/room/" + message.getRoomId(),

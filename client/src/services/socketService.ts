@@ -8,6 +8,7 @@ export const MessageType = {
   CODE_CHANGE: "CODE_CHANGE",
   CURSOR_MOVE: "CURSOR_MOVE",
   PARTICIPANTS_UPDATE: "PARTICIPANTS_UPDATE",
+  CODE_SYNC: "CODE_SYNC",
 } as const;
 
 export type MessageType = (typeof MessageType)[keyof typeof MessageType];
@@ -23,6 +24,7 @@ export class SocketService {
   private client: Client | null = null;
   private roomId: string | null = null;
   private isConnected: boolean = false;
+  private name: string | null = null;
 
   private constructor() {}
 
@@ -41,6 +43,7 @@ export class SocketService {
     if (this.isConnected) return;
 
     this.roomId = roomId;
+    this.name = name;
 
     this.client = new Client({
       brokerURL: url.replace("http", "ws"), // Fallback if no webSocketFactory
@@ -177,6 +180,14 @@ export class SocketService {
         const { senderSessionId, lineNumber, column } = message.payload;
         if (senderSessionId) {
           store.updateCursor(senderSessionId, { lineNumber, column });
+        }
+        break;
+      }
+      case MessageType.CODE_SYNC: {
+        const { code, language, targetName } = message.payload;
+        if (targetName === this.name) {
+          store.setCode(code);
+          if (language) store.setLanguage(language);
         }
         break;
       }

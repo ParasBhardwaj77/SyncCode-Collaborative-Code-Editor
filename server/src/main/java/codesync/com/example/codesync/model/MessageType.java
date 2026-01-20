@@ -6,6 +6,7 @@ public enum MessageType {
     LEAVE_ROOM,
     CODE_CHANGE,
     CURSOR_MOVE,
-    PARTICIPANTS_UPDATE
+    PARTICIPANTS_UPDATE,
+    CODE_SYNC
 
 }
