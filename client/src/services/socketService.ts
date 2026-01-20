@@ -38,7 +38,8 @@ export class SocketService {
   public connect(
     roomId: string,
     name: string = "Anonymous",
-    url: string = "http://localhost:8080/ws",
+    url: string = (import.meta.env.VITE_API_BASE_URL ||
+      "http://localhost:8080") + "/ws",
   ) {
     if (this.isConnected) return;
 
