@@ -1,6 +1,7 @@
 package codesync.com.example.codesync.model;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Collection;
@@ -8,6 +9,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Getter
+@Setter
 @RequiredArgsConstructor
 public class Room {
 
