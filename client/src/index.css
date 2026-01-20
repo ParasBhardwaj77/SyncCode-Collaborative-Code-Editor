@@ -63,3 +63,12 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #4b5563;
 }
+
+/* Force Monaco Widgets to appear above everything */
+.monaco-editor-hover,
+.monaco-hover,
+.suggest-widget,
+.monaco-editor .monaco-editor-overlay,
+.editor-widget {
+  z-index: 9999 !important;
+}

@@ -46,17 +46,17 @@ export const Layout = () => {
   }, [resize, stopResizing]);
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-space-dark text-white overflow-hidden font-sans">
+    <div className="h-screen w-screen flex flex-col bg-space-dark text-white overflow-hidden font-sans relative">
       {/* Top Navigation */}
-      <div className="flex-none z-50">
+      <header className="h-16 flex-none z-10 border-b border-white/10 bg-space-dark/80 backdrop-blur-lg">
         <Navbar />
-      </div>
+      </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden w-full relative">
+      <div className="flex-1 flex min-h-0 w-full relative overflow-hidden">
         {/* Sidebar - Fixed Width */}
         {user && (
-          <aside className="w-64 flex-none border-r border-white/10 flex flex-col bg-space-dark/95 backdrop-blur-sm z-40">
+          <aside className="w-64 flex-none border-r border-white/10 flex flex-col bg-space-dark/95 backdrop-blur-sm z-40 h-full">
             <Sidebar />
           </aside>
         )}
@@ -64,7 +64,7 @@ export const Layout = () => {
         {/* Center - Editor & Terminal */}
         <div className="flex-1 flex flex-col min-w-0 bg-space-dark relative z-0">
           {/* Editor - Takes available space */}
-          <main className="flex-1 min-h-0 relative">
+          <main className="flex-1 min-h-0 relative overflow-hidden flex flex-col">
             <EditorPanel />
           </main>
 

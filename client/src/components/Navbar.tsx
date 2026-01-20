@@ -86,7 +86,7 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="h-16 border-b border-white/10 bg-space-dark/80 backdrop-blur-lg flex items-center justify-between px-6 z-50 relative">
+    <nav className="h-full flex items-center justify-between px-6">
       <div className="flex items-center gap-3">
         <div className="bg-accent-purple/20 p-2 rounded-lg">
           <Code2 className="text-accent-purple w-6 h-6" />

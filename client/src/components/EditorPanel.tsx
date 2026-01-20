@@ -85,7 +85,7 @@ export const EditorPanel = () => {
   }, [participants]);
 
   return (
-    <div className="h-full w-full overflow-hidden bg-space-dark relative">
+    <div className="h-full w-full overflow-hidden bg-space-dark relative pt-10">
       {/* Glowing effect behind editor logic could go here */}
       <div className="absolute inset-0 bg-accent-purple/5 pointer-events-none" />
 
@@ -104,10 +104,17 @@ export const EditorPanel = () => {
           fontLigatures: true,
           scrollBeyondLastLine: false,
           automaticLayout: true,
-          padding: { top: 16, bottom: 16 },
+          padding: { top: 0, bottom: 16 },
           smoothScrolling: true,
           cursorBlinking: "smooth",
           cursorSmoothCaretAnimation: "on",
+          wordWrap: "on",
+          wrappingStrategy: "advanced",
+          lineNumbers: "on",
+          folding: true,
+          fixedOverflowWidgets: true,
+          hover: { delay: 300 },
+          quickSuggestions: { other: true, comments: true, strings: true },
         }}
         loading={
           <div className="text-accent-cyan flex items-center justify-center p-4">
