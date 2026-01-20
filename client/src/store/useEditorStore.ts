@@ -1,10 +1,11 @@
 import { create } from "zustand";
 
 export interface Participant {
-  id: string;
+  id: string; // This maps to sessionId from backend
   name: string;
   avatar: string;
-  color: string; // Cursor color
+  color: string;
+  isOnline: boolean;
   cursorPos?: { lineNumber: number; column: number };
 }
 
@@ -15,7 +16,7 @@ interface EditorState {
   terminalOutput: string;
   isRunning: boolean;
   roomId: string;
-  user: { username: string; token: string } | null;
+  user: { username: string; token: string; avatar: string } | null;
 
   setCode: (code: string) => void;
   setLanguage: (language: string) => void;
@@ -30,18 +31,31 @@ interface EditorState {
   clearTerminal: () => void;
   setIsRunning: (isRunning: boolean) => void;
   setRoomId: (roomId: string) => void;
-  setUser: (user: { username: string; token: string } | null) => void;
+  setUser: (
+    user: { username: string; token: string; avatar: string } | null,
+  ) => void;
 }
 
 const BOILERPLATES: Record<string, string> = {
   javascript: `// JavaScript Playground\n\nfunction greet(name) {\n  console.log("Hello, " + name + "!");\n}\n\ngreet("SyncCode User");\n`,
 };
 
-const getInitialUser = () => {
+const getInitialUser = (): {
+  username: string;
+  token: string;
+  avatar: string;
+} | null => {
   const userStr = localStorage.getItem("user");
   if (userStr) {
     try {
-      return JSON.parse(userStr);
+      const parsed = JSON.parse(userStr);
+      return {
+        username: parsed.username,
+        token: parsed.token,
+        avatar:
+          parsed.avatar ||
+          `https://api.dicebear.com/7.x/avataaars/svg?seed=${parsed.username}`,
+      };
     } catch (e) {
       return null;
     }
@@ -52,23 +66,10 @@ const getInitialUser = () => {
 export const useEditorStore = create<EditorState>((set) => ({
   code: BOILERPLATES.javascript,
   language: "javascript",
-  participants: [
-    {
-      id: "1",
-      name: "You",
-      avatar: "https://github.com/shadcn.png",
-      color: "#7c3aed",
-    },
-    {
-      id: "2",
-      name: "Alice",
-      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice",
-      color: "#06b6d4",
-    },
-  ],
+  participants: [],
   terminalOutput: "> Ready to run code...\n",
   isRunning: false,
-  roomId: "default-room",
+  roomId: "",
   user: getInitialUser(),
 
   setCode: (code) => set({ code }),

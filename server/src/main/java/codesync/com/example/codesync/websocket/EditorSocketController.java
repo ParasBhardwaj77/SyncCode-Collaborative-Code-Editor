@@ -19,123 +19,118 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class EditorSocketController {
 
-    private final RoomService roomService;
-    private final SimpMessagingTemplate messagingTemplate;
+        private final RoomService roomService;
+        private final SimpMessagingTemplate messagingTemplate;
 
-    /* ---------------- JOIN ROOM ---------------- */
+        /* ---------------- JOIN ROOM ---------------- */
 
-    @MessageMapping("/room.join")
-    public void joinRoom(
-            @Payload SocketMessage message,
-            org.springframework.messaging.Message<?> stompMessage
-    ) {
+        @MessageMapping("/room.join")
+        public void joinRoom(
+                        @Payload SocketMessage message,
+                        org.springframework.messaging.Message<?> stompMessage) {
 
-        String roomId = message.getRoomId();
+                String roomId = message.getRoomId();
 
-        String sessionId = (String) stompMessage
-                .getHeaders()
-                .get("simpSessionId");
+                String sessionId = (String) stompMessage
+                                .getHeaders()
+                                .get("simpSessionId");
 
-        @SuppressWarnings("unchecked")
-        Map<String, Object> payload =
-                (Map<String, Object>) message.getPayload();
+                @SuppressWarnings("unchecked")
+                Map<String, Object> payload = (Map<String, Object>) message.getPayload();
 
-        String name = payload.getOrDefault("name", "Anonymous").toString();
+                String name = payload.getOrDefault("name", "Anonymous").toString().trim();
+                String avatar = payload
+                                .getOrDefault("avatar", "https://api.dicebear.com/7.x/avataaars/svg?seed=" + name)
+                                .toString();
 
-        Participant participant = new Participant(
-                sessionId,
-                name,
-                generateColor()
-        );
+                Participant participant = Participant.builder()
+                                .sessionId(sessionId)
+                                .name(name)
+                                .avatar(avatar)
+                                .color(generateColor())
+                                .isOnline(true)
+                                .build();
 
-        roomService.addParticipant(roomId, participant);
+                roomService.addParticipant(roomId, participant);
 
-        messagingTemplate.convertAndSend(
-                "/topic/room/" + roomId,
-                buildParticipantsUpdate(roomId)
-        );
+                messagingTemplate.convertAndSend(
+                                "/topic/room/" + roomId,
+                                buildParticipantsUpdate(roomId));
 
-        log.info("✅ {} joined room {}", name, roomId);
-    }
+                log.info("✅ {} joined room {}", name, roomId);
+        }
 
+        /* ---------------- LEAVE ROOM ---------------- */
 
-    /* ---------------- LEAVE ROOM ---------------- */
+        @MessageMapping("/room.leave")
+        public void leaveRoom(
+                        @Payload SocketMessage message,
+                        org.springframework.messaging.Message<?> stompMessage) {
 
-    @MessageMapping("/room.leave")
-    public void leaveRoom(
-            @Payload SocketMessage message,
-            org.springframework.messaging.Message<?> stompMessage
-    ) {
+                String roomId = message.getRoomId();
+                String sessionId = (String) stompMessage
+                                .getHeaders()
+                                .get("simpSessionId");
 
-        String roomId = message.getRoomId();
-        String sessionId = (String) stompMessage
-                .getHeaders()
-                .get("simpSessionId");
+                roomService.removeParticipant(roomId, sessionId);
 
-        roomService.removeParticipant(roomId, sessionId);
+                messagingTemplate.convertAndSend(
+                                "/topic/room/" + roomId,
+                                buildParticipantsUpdate(roomId));
 
-        messagingTemplate.convertAndSend(
-                "/topic/room/" + roomId,
-                buildParticipantsUpdate(roomId)
-        );
+                log.info("❌ Session {} left room {}", sessionId, roomId);
+        }
 
-        log.info("❌ Session {} left room {}", sessionId, roomId);
-    }
+        /* ---------------- CODE CHANGE ---------------- */
 
-    /* ---------------- CODE CHANGE ---------------- */
+        @MessageMapping("/code.change")
+        public void codeChange(
+                        @Payload SocketMessage message,
+                        org.springframework.messaging.Message<?> stompMessage) {
 
-    @MessageMapping("/code.change")
-    public void codeChange(
-            @Payload SocketMessage message,
-            org.springframework.messaging.Message<?> stompMessage
-    ) {
+                String sessionId = (String) stompMessage
+                                .getHeaders()
+                                .get("simpSessionId");
 
-        String sessionId = (String) stompMessage
-                .getHeaders()
-                .get("simpSessionId");
+                Map<String, Object> payload = (Map<String, Object>) message.getPayload();
+                payload.put("senderSessionId", sessionId);
 
-        Map<String, Object> payload = (Map<String, Object>) message.getPayload();
-        payload.put("senderSessionId", sessionId);
+                messagingTemplate.convertAndSend(
+                                "/topic/room/" + message.getRoomId(),
+                                message);
 
-        messagingTemplate.convertAndSend(
-                "/topic/room/" + message.getRoomId(),
-                message
-        );
+                log.debug("⌨️ CODE_CHANGE [{}] from {}", message.getRoomId(), sessionId);
+        }
 
-        log.debug("⌨️ CODE_CHANGE [{}] from {}", message.getRoomId(), sessionId);
-    }
+        /* ---------------- CURSOR MOVE ---------------- */
 
+        @MessageMapping("/cursor.move")
+        public void cursorMove(@Payload SocketMessage message) {
 
-    /* ---------------- CURSOR MOVE ---------------- */
+                messagingTemplate.convertAndSend(
+                                "/topic/room/" + message.getRoomId(),
+                                message);
 
-    @MessageMapping("/cursor.move")
-    public void cursorMove(@Payload SocketMessage message) {
+                log.debug("🖱️ CURSOR_MOVE [{}]", message.getRoomId());
+        }
 
-        messagingTemplate.convertAndSend(
-                "/topic/room/" + message.getRoomId(),
-                message
-        );
+        /* ---------------- HELPERS ---------------- */
 
-        log.debug("🖱️ CURSOR_MOVE [{}]", message.getRoomId());
-    }
+        private SocketMessage buildParticipantsUpdate(String roomId) {
 
-    /* ---------------- HELPERS ---------------- */
+                Room room = roomService.getRoom(roomId);
 
-    private SocketMessage buildParticipantsUpdate(String roomId) {
+                SocketMessage response = new SocketMessage();
+                response.setType(MessageType.PARTICIPANTS_UPDATE);
+                response.setRoomId(roomId);
+                response.setPayload(room.getParticipants());
 
-        Room room = roomService.getRoom(roomId);
+                log.info("📢 Broadcasting participants update for room {}", roomId);
 
-        SocketMessage response = new SocketMessage();
-        response.setType(MessageType.PARTICIPANTS_UPDATE);
-        response.setRoomId(roomId);
-        response.setPayload(room.getParticipants());
+                return response;
+        }
 
-        log.info("📢 Broadcasting participants update for room {}", roomId);
-
-        return response;
-    }
-
-    private String generateColor() {
-        return "#" + Integer.toHexString((int) (Math.random() * 0xffffff));
-    }
+        private String generateColor() {
+                return "#" + Integer.toHexString((int) (Math.random() * 0xffffff));
+        }
 }

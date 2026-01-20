@@ -1,6 +1,5 @@
 package codesync.com.example.codesync.model;
 
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -13,20 +12,22 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Room {
 
     private final String roomId;
+    // Track by name (username) instead of sessionId to maintain status
     private final Map<String, Participant> participants = new ConcurrentHashMap<>();
 
     public void addParticipant(Participant participant) {
-        participants.put(participant.getSessionId(),participant);
+        participants.put(participant.getName(), participant);
     }
 
-    public void removeParticipant(String sessionId){
-        participants.remove(sessionId);
+    public void removeParticipantBySessionId(String sessionId) {
+        participants.values().stream()
+                .filter(p -> sessionId.equals(p.getSessionId()))
+                .findFirst()
+                .ifPresent(p -> p.setOnline(false));
     }
 
     public Collection<Participant> getParticipants() {
         return participants.values();
     }
-
-
 
 }

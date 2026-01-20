@@ -99,7 +99,12 @@ export class SocketService {
       {
         type: MessageType.JOIN_ROOM,
         roomId: this.roomId!,
-        payload: { name },
+        payload: {
+          name,
+          avatar:
+            useEditorStore.getState().user?.avatar ||
+            `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
+        },
       },
       "/app/room.join",
     );
@@ -143,8 +148,22 @@ export class SocketService {
 
     switch (message.type) {
       case MessageType.PARTICIPANTS_UPDATE: {
-        const participants: Participant[] = message.payload;
-        store.setParticipants(participants);
+        const rawParticipants: any[] = message.payload;
+
+        const mappedParticipants: Participant[] = rawParticipants.map((p) => ({
+          id: p.sessionId,
+          name: p.name,
+          avatar: p.avatar,
+          color: p.color,
+          isOnline:
+            p.isOnline !== undefined
+              ? p.isOnline
+              : p.online !== undefined
+                ? p.online
+                : true,
+        }));
+
+        store.setParticipants(mappedParticipants);
         break;
       }
       case MessageType.CODE_CHANGE: {

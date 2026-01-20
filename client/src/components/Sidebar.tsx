@@ -48,8 +48,14 @@ export const Sidebar = () => {
                 {p.name}
               </div>
               <div className="flex items-center gap-1.5 mt-1">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[10px] text-gray-400">Online</span>
+                <div
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    p.isOnline ? "bg-green-500 animate-pulse" : "bg-gray-500"
+                  }`}
+                />
+                <span className="text-[10px] text-gray-400">
+                  {p.isOnline ? "Online" : "Offline"}
+                </span>
               </div>
             </div>
 

@@ -23,7 +23,13 @@ export const LoginPage = () => {
 
     try {
       const data = await login(usernameOrEmail, password);
-      setUser({ username: data.username, token: data.token });
+      setUser({
+        username: data.username,
+        token: data.token,
+        avatar:
+          data.avatar ||
+          `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.username}`,
+      });
       navigate("/");
     } catch (err: any) {
       setError(err.response?.data?.message || "Invalid username or password");

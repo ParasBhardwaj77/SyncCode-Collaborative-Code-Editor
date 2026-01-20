@@ -7,7 +7,8 @@ import { useRef, useEffect } from "react";
 // Loader.config({ paths: { vs: "..." } });
 
 export const EditorPanel = () => {
-  const { code, language, setCode, participants, roomId } = useEditorStore();
+  const { code, language, setCode, participants, roomId, user } =
+    useEditorStore();
   const monacoRef = useRef<Monaco | null>(null);
   const editorRef = useRef<any>(null);
 
@@ -66,14 +67,15 @@ export const EditorPanel = () => {
     socketService.disconnect();
 
     // Connect to the new room
-    socketService.connect(roomId, "User_" + Math.floor(Math.random() * 1000));
+    const username = user?.username || "Anonymous";
+    socketService.connect(roomId, username);
 
-    console.log(`Connected to room: ${roomId}`);
+    console.log(`Connected to room: ${roomId} as ${username}`);
 
     return () => {
       socketService.disconnect();
     };
-  }, [roomId]);
+  }, [roomId, user?.username]);
   useEffect(() => {
     if (!editorRef.current || !monacoRef.current) return;
 
